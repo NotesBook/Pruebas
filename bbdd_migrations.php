@@ -57,7 +57,6 @@ if(is_null($row_check_actual_version["version_actual"])) { //Si no existe ningú
 } else {
 	$version_actual = $row_check_actual_version["version_actual"];
 }
-echo "versión actual de bbdd:".$version_actual."<br>";
 
 //5. Hacemos el commit, porque lo tenemos desactivado
 if (!$conn->commit()) {
@@ -72,36 +71,44 @@ if (!$conn->commit()) {
  */
 
 
-//1. Comprobamos si existe la tabla de versiones y la creamos
-$sql_create_table_user_if_not_exists = 
-	"CREATE TABLE IF NOT EXISTS users (
-        id INT NOT NULL AUTO_INCREMENT,
-        PRIMARY KEY(id),
-        name VARCHAR(50) NOT NULL
-    )";
-//print $sql_create_table_user_if_not_exists."<br>";
-$conn->query($sql_create_table_user_if_not_exists);
+//1. Comprobamos si existe la tabla de versiones y la creamos, sólo si nuestra versión actual es la anterior a esta Migración (la versión 0)
+if($version_actual == "0") {
+	$sql_create_table_user_if_not_exists = 
+		"CREATE TABLE IF NOT EXISTS users (
+	        id INT NOT NULL AUTO_INCREMENT,
+	        PRIMARY KEY(id),
+	        name VARCHAR(50) NOT NULL
+	    )";
+	//print $sql_create_table_user_if_not_exists."<br>";
+	$conn->query($sql_create_table_user_if_not_exists);
 
-//4. Insertamos, si no lo están ya los usuarios de prueba (Habrá que hacerlo para cada usuario que se quiera insertar)
-function insertar_usuario_si_no_existe($name) {
-	global $conn;
+	//2. Insertamos, si no lo están ya los usuarios de prueba (Habrá que hacerlo para cada usuario que se quiera insertar)
+	function insertar_usuario_si_no_existe($name) {
+		global $conn;
 
-	$sql_check_user1_exists = "SELECT * FROM users WHERE name = '$name'";
-	//print $sql_check_user1_exists."<br>";
-	$result_user1_exists = $conn->query($sql_check_user1_exists);
-	$row_check_user1_exists = $result_user1_exists->fetch_array();
+		$sql_check_user1_exists = "SELECT * FROM users WHERE name = '$name'";
+		//print $sql_check_user1_exists."<br>";
+		$result_user1_exists = $conn->query($sql_check_user1_exists);
+		$row_check_user1_exists = $result_user1_exists->fetch_array();
 
-	if(is_null($row_check_user1_exists["name"])) { //Si no existe ningún registro, insertamos la versión 0
-		$sql_insert_user = "INSERT INTO users(name) VALUES('$name')";
-		//print $sql_insert_user."<br>";
-		$conn->query($sql_insert_user);
-	} 
+		if(is_null($row_check_user1_exists["name"])) { //Si no existe ningún registro, insertamos la versión 0
+			$sql_insert_user = "INSERT INTO users(name) VALUES('$name')";
+			//print $sql_insert_user."<br>";
+			$conn->query($sql_insert_user);
+		} 
+	}
+
+	insertar_usuario_si_no_existe("galo");
+	insertar_usuario_si_no_existe("juan");
+
+	//3. Actualizamos la versión de la bbdd
+	$sql_update_versions_1 = "INSERT INTO versions(version_number, date, description) VALUES(1, NOW(), 'Creación de tabla usuarios, inserción de datos de prueba')";
+	//print $sql_update_versions_0."<br>";
+	$conn->query($sql_update_versions_1);
 }
 
-insertar_usuario_si_no_existe("galo");
-insertar_usuario_si_no_existe("juan");
 
-//5. Hacemos el commit, porque lo tenemos desactivado
+//4. Hacemos el commit, porque lo tenemos desactivado
 if (!$conn->commit()) {
     print("Transaction commit failed\n");
     exit();
@@ -110,5 +117,7 @@ if (!$conn->commit()) {
 
 /* close connection */
 $conn->close();
+
+echo "versión actual de bbdd:".$version_actual."<br>";
 
  ?>
